@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width-device-width, initial-scale=1.0">
+        <title>Arquivo e Memória</title>
+        <meta name="description" content="Galeria de vídeos de recordações com busca, filtros, favoritos e player em tela cheia." />
+        <style>
+            :root{
+                --bg: #0b0c10;
+                --panel: #111317;
+                --muted: #9aa3b2;
+                --text: #e6e9ef;
+                --brand: #7c5cff;
+                --ring: rgba(124,92,255,.35);
+                --ok: #22c55e;
+                --warn:#f59e0b;
+                --danger:#ef4444;
+                --shadow: 0 10px 30px rgba(0,0,0,.25);
+                --radius: 18px;
+            }
+            *{box-sizing:border-box}
+            html,body{height:100%}
+            body{
+                margin:0;
+                font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+                color:var(--text);
+                background: radial-gradient(1400px 800px at 10% -10%, rgba(124,92,255,.08), transparent 40%),
+                radial-gradient(1400px 800px at 110% 10%, rgba(16,185,129,.08), transparent 40%),
+                var(--bg);
+            }
+            header{
+                position: sticky; top:0; z-index:20;
+                backdrop-filter: saturate(1.2) blur(10px);
+                background: linear-gradient(180deg, rgba(11,12,16,.9), rgba(11,12,16,.65));
+                border-bottom: 1px solid rgba(255,255,255,.06);
+            }
+            .wrap{max-width:1100px; margin:0 auto; padding:18px;}
+            .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+            .title{
+                display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.3px;
+            }
+            .logo{width:38px; height:38px; border-radius:12px; background: conic-gradient(from 140deg, #7c5cff, #10b981, #7c5cff);
+                box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), var(--shadow);
+            }
+
+            .pill{padding:6px 10px; border:1px solid rgba(255,255,255,.08); border-radius:999px; color:var(--muted);}
+            .toolbar{display:grid; grid-template-columns: 1fr auto auto auto; gap:10px; margin-top:12px}
+            .input, select, button{
+                appearance:none; border:none; outline:none;
+                background:var(--panel); color:var(--text);
+                padding:12px 14px; border-radius:12px; box-shadow: var(--shadow);
+                border:1px solid rgba(255,255,255,.06);
+            }
+            .input:focus, select:focus{ box-shadow: 0 0 0 4px var(--ring), var(--shadow) }
+            .ghost{ background: transparent; border:1px dashed rgba(255,255,255,.18)}
+            .brand{ background: linear-gradient(180deg, #7c5cff, #6a46ff); font-weight:700 }
+
+            main{max-width:1100px; margin: 18px auto; padding: 0 18px 80px}
+            .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:16px; margin-top:16px }
+            .card{
+                position:relative; overflow:hidden; border-radius: var(--radius);
+                background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+                border:1px solid rgba(255,255,255,.08);
+                transition: transform .2s ease, box-shadow .2s ease;
+            }
+            .card:hover{ transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124,92,255,.15) }
+            .thumb{
+                aspect-ratio: 16/9; width:100%; display:block; background:
+                linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.6)),
+                radial-gradient(400px 120px at 80% 0%, rgba(124,92,255,.35), transparent 40%),
+                linear-gradient(135deg, #1b1f2a, #0f1116);
+            }
+            .meta{ padding:12px; display:grid; gap:6px }
+            .meta h3{ margin:0; font-size:16px }
+            .tags{display:flex; flex-wrap:wrap; gap:6px}
+            .tag{font-size:12px; color:var(--muted); background: rgba(255,255,255,.06); padding:4px 8px; border-radius:999px}
+
+            .actions{ position:absolute; inset:8px 8px auto auto; display:flex; gap:6px }
+            .iconbtn{ cursor:pointer; padding:8px; border-radius:10px; background: rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.15) }
+            .iconbtn[aria-pressed="true"]{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.5) }
+
+            /* Upload area */
+            .uploader{ margin-top:16px; display:grid; gap:10px; }
+            .drop{
+                border:2px dashed rgba(255,255,255,.18); border-radius:16px; padding:18px; text-align:center;
+                background: rgba(255,255,255,.03);
+            }
+            .drop.drag{ border-color: #7c5cff; background: rgba(124,92,255,.08) }
+            .muted{ color:var(--muted) }
+
+            /* Modal player */
+            dialog[player]{ width:min(1100px, 95vw); border:none; padding:0; border-radius: 18px; overflow:hidden; background:#000; box-shadow: var(--shadow) }
+            dialog[player]::backdrop{ background: rgba(0,0,0,.6) }
+            .playerTop{ display:flex; justify-content:space-between; align-items:center; padding:10px; background: linear-gradient(180deg, rgba(0,0,0,.7), transparent) }
+            .playerBody{ padding: 0 10px 10px }
+            video{ width:100%; height:auto; display:block; background:#000 }
+            .btn{ cursor:pointer }
+
+            footer{ text-align:center; color:var(--muted); padding:30px 16px }
+            .sr{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0 }
+
+            @media (max-width:640px){
+                .toolbar{ grid-template-columns: 1fr 1fr 1fr; }
+                .hide-sm{ display:none }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="wrap">
+                <div class="row">
+                    <div class="title" aria-live="polite">
+
+                        <div class="logo" aria-hidden="true"></div>
+                        <div>
+                            <div style="font-size:18px">Minhas Recordações</div>
+                            <div class="pill" id="countPill">0 vídeos</div>
+                        </div>
+                    </div>
+                    <div style="flex:1"></div>
+                    <button id="toggleTheme" class="ghost" title="Alternar tema" aria-pressed="false">🌙 Tema</button>
+                </div>
+                <div class="toolbar">
+                    <input id="search" class="input" placeholder="Pesquisar por título, pessoas ou tags…" aria-label="Pesquisar" />
+                    <select id="yearFilter" title="Filtrar por ano">
+                        <option value="">Todos os anos</option>
+                    </select>
+                    <select id="sortBy" title="Ordenar">
+                        <option value="desc">Mais recentes</option>
+                        <option value="asc">Mais antigos</option>
+                        <option value="title">Título (A–Z)</option>
+                    </select>
+                    <button id="clearAll" class="ghost" title="Limpar filtros">Limpar</button>
+                </div>
+                <section class="uploader" aria-labelledby="addLabel">
+                    <h2 id="addLabel" class="sr">Adicionar vídeos</h2>
+                    <div class="drop" id="drop">
+                        <p><strong>Arraste e solte</strong> vídeos aqui ou <label for="file" style="text-decoration:underline; cursor:pointer">selecione do dispositivo</label>.</p>
+                        <input id="file" type="file" accept="video/*" multiple hidden />
+                        <p class="muted">Os vídeos locais serão adicionados à galeria (não ficam salvos após fechar a página).</p>
+                        <details>
+                            <summary>Adicionar vídeo por URL</summary>
+                            <div class="row" style="margin-top:8px">
+                                <input id="urlInput" class="input" placeholder="Cole a URL direta do .mp4/.webm" />
+                                <input id="urlTitle" class="input" placeholder="Título (opcional)" />
+                                <input id="urlTags" class="input hide-sm" placeholder="Tags separadas por vírgula" />
+                                <button id="addUrl" class="brand">Adicionar</button>
+                            </div>
+                            <p class="muted">Dica: hospede seus vídeos em seu servidor ou serviço de armazenamento e use o link direto do arquivo.</p>
+                        </details>
+                    </div>
+                </section>
+            </div>
+        </header>
+        <main>
+            <section id="gallery" class="grid" aria-live="polite"></section>
+        </main>
+        <dialog player id="playerDialog" aria-label="Reprodução do vídeo">
+            <div class="playerTop">
+                <div id="playerTitle">Reproduzindo…</div>
+                <div class="row">
+                    <button id="downloadBtn" class="iconbtn" title="Baixar">⬇️</button>
+                    <button id="shareBtn" class="iconbtn" title="Compartilhar">🔗</button>
+                    <button id="closePlayer" class="iconbtn" title="Fechar (Esc)">✖️</button>
+                </div>
+            </div>
+            <div class="playerBody">
+                <video id="player" controls preload="metadata"></video>
+            </div>
+        </dialog>
+        <footer>
+            <small>Feito com ♥ para suas memórias. Dica: use os favoritos ⭐ para destacar o que mais ama.</small>
+        </footer>
+
+        <template id="cardTpl">
+            <article class="card">
+                <div class="thumb" role="img" aria-label="Miniatura do vídeo"></div>
+                <div class="actions">
+                    <button class="iconbtn play" title="Reproduzir">▶️</button>
+                    <button class="iconbtn fav" title="Favorito" aria-pressed="false">⭐</button>
+                    <button class="danger remove">🗑️ Remover</button>
+                </div>
+                <div class="meta">
+                    <h3 class="title"></h3>
+                    <div class="muted small date"></div>
+                    <div class="tags"></div>
+                </div>
+            </article>
+        </template>
+
+        <script>
+            // ====== Util ======
+            const $ = (sel, el=document) => el.querySelector(sel)
+            const $$ = (sel, el=document) => [...el.querySelectorAll(sel)]
+            const store = {
+                get(){ try { return JSON.parse(localStorage.getItem('memories')||'[]') } catch { return [] } },
+                set(v){ localStorage.setItem('memories', JSON.stringify(v)) }
+            }
+
+
+            // ====== Estado ======
+            let memories = store.get()
+
+            // Pré-carrega alguns exemplos (só na primeira visita)
+            if(memories.length === 0){
+                memories = [
+                { id: crypto.randomUUID(), title:'Recordação 1', src:'videos/VID-20250820-WA0016.mp4', date:'2025-08-20', tags:['família','festa'] },
+                { id: crypto.randomUUID(), title:'Recordação 2', src:'videos/VID-20250820-WA0015.mp4', date:'2025-08-20', tags:['viagem','praia'] },
+                { id: crypto.randomUUID(), title:'Recordação 3', src:'videos/VID-20250820-WA0010.mp4', date:'2025-08-20', tags:['conquista','escola'] },
+                { id: crypto.randomUUID(), title:'Recordação 4', src:'videos/VID-20250820-WA0009.mp4', date:'2025-08-20', tags:['conquista','escola'] },
+            ]
+            store.set(memories)
+        }
+
+        // ====== Renderização ======
+
+        const gallery = $('#gallery')
+        const tpl = $('#cardTpl')
+
+        function yearsFrom(data){
+            return [...new Set(data.map(v=> (v.date||'').slice(0,4)).filter(Boolean))].sort()
+        }
+
+        function refreshFilters(){
+            const y = $('#yearFilter')
+            const selected = y.value
+            y.innerHTML = '<option value="">Todos os anos</option>' + yearsFrom(memories).map(yr=>`<option ${yr===selected?'selected':''}>${yr}</option>`).join('')
+        }
+
+        function render(){
+            const q = $('#search').value.trim().toLowerCase()
+            const year = $('#yearFilter').value
+            const sortBy = $('#sortBy').value
+
+            let list = memories.filter(m=>{
+                const hay = [m.title, (m.tags||[]).join(','), m.date].join(' ').toLowerCase()
+                const byYear = !year || (m.date||'').startsWith(year)
+                return (!q || hay.includes(q)) && byYear
+            })
+
+            list.sort((a,b)=>{
+                if(sortBy==='title') return (a.title||'').localeCompare(b.title||'')
+                if(sortBy==='asc') return (a.date||'').localeCompare(b.date||'')
+                // desc
+                return (b.date||'').localeCompare(a.date||'')
+            })
+
+            gallery.innerHTML = ''
+            list.forEach(m=> gallery.appendChild(cardFor(m)))
+            $('#countPill').textContent = `${list.length} ${list.length===1?'vídeo':'vídeos'}`
+        }
+
+        function cardFor(m){
+            const node = tpl.content.cloneNode(true)
+            const root = node.firstElementChild
+            $('.title', root).textContent = m.title || 'Sem título'
+            $('.date', root).textContent = m.date ? new Date(m.date).toLocaleDateString() : '—'
+            const tags = $('.tags', root)
+            ;(m.tags||[]).forEach(t=>{
+                const s = document.createElement('span'); s.className='tag'; s.textContent = t; tags.appendChild(s)
+            })
+       
+            // A thumb gerada é apenas visual; o próprio <video> será carregado no modal
+            root.style.setProperty('--thumb', `url('')`)
+            root.addEventListener('click', e=>{
+                const playBtn = e.target.closest('.play')
+                const favBtn = e.target.closest('.fav')
+                if(playBtn){ openPlayer(m) }
+                else if(favBtn){ toggleFav(favBtn, m) }
+            })
+            const fav = $('.fav', root); fav.setAttribute('aria-pressed', Boolean(m.fav))
+            return root
+        }
+
+        function toggleFav(btn, m){
+            m.fav = !m.fav
+            btn.setAttribute('aria-pressed', m.fav)
+            store.set(memories)
+        }
+
+        // ====== Player ======
+        const dialog = $('#playerDialog')
+        const video = $('#player')
+
+        function openPlayer(m){
+            $('#playerTitle').textContent = m.title || 'Reprodução'
+            video.src = m.src
+            video.currentTime = 0
+            video.play().catch(()=>{})
+            $('#downloadBtn').onclick = () => {
+                const a = document.createElement('a'); a.href = m.src; a.download = (m.title||'video')+extFrom(m.src); a.click()
+            }
+            $('#shareBtn').onclick = async () => {
+                try{
+                    if(navigator.share){ await navigator.share({ title:m.title, url:m.src }) }
+                    else { await navigator.clipboard.writeText(m.src); alert('Link copiado!') }
+                }catch{}
+            }
+            dialog.showModal()
+        }
+        $('#closePlayer').onclick = ()=>{ video.pause(); dialog.close() }
+        dialog.addEventListener('click', (e)=>{ if(e.target===dialog){ video.pause(); dialog.close() } })
+        document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && dialog.open){ video.pause(); dialog.close() } })
+
+        function extFrom(url){ const m = /\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i.exec(url||''); return m?'.'+m[1].toLowerCase():'' }
+
+        // ====== Upload local ======
+        const file = $('#file');
+        const drop = $('#drop');
+        drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag') })
+        drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'))
+        drop.addEventListener('drop', e=>{
+            e.preventDefault(); drop.classList.remove('drag');
+            handleFiles(e.dataTransfer.files)
+        })
+        drop.addEventListener('click', e=>{
+            if(e.target.tagName!=='INPUT' && !e.target.closest('details')) file.click()
+        })
+        file.addEventListener('change', e=> handleFiles(e.target.files))
+
+        function handleFiles(files){
+            const arr = [...files].filter(f=> f.type.startsWith('video/'))
+            if(arr.length===0){ alert('Selecione arquivos de vídeo.'); return }
+            const today = new Date().toISOString().slice(0,10)
+            arr.forEach(f=>{
+                const url = URL.createObjectURL(f)
+                memories.unshift({ id: crypto.randomUUID(), title: f.name.replace(/\.[^.]+$/, ''), src: url, date: today, tags: ['local'] })
+            })
+            refreshFilters(); render()
+        }
+
+        // ====== URL add ======
+        $('#addUrl').addEventListener('click', ()=>{
+            const url = $('#urlInput').value.trim()
+            if(!url){ alert('Informe a URL do vídeo.'); return }
+            const t = $('#urlTitle').value.trim()
+            const tags = $('#urlTags').value.split(',').map(s=>s.trim()).filter(Boolean)
+            const today = new Date().toISOString().slice(0,10)
+            memories.unshift({ id: crypto.randomUUID(), title: t || new URL(url).pathname.split('/').pop(), src:url, date: today, tags })
+            store.set(memories)
+            $('#urlInput').value = $('#urlTitle').value = $('#urlTags').value = ''
+            refreshFilters(); render()
+        })
+
+        // ====== Filtros & tema ======
+        $('#search').addEventListener('input', render)
+        $('#yearFilter').addEventListener('change', render)
+        $('#sortBy').addEventListener('change', render)
+        $('#clearAll').addEventListener('click', ()=>{ $('#search').value=''; $('#yearFilter').value=''; $('#sortBy').value='desc'; render() })
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
+        const THEME_KEY = 'mem-theme'
+        const savedTheme = localStorage.getItem(THEME_KEY)
+        if(savedTheme==='light') document.documentElement.style.setProperty('--bg', '#f6f7fb')
+        $('#toggleTheme').addEventListener('click', ()=>{
+            const isLight = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()==='#f6f7fb'
+            if(isLight){ // voltar pro dark
+                document.documentElement.style.setProperty('--bg', '#0b0c10')
+                localStorage.setItem(THEME_KEY,'dark')
+            } else {
+                document.documentElement.style.setProperty('--bg', '#f6f7fb')
+                localStorage.setItem(THEME_KEY,'light')
+            }
+        })
+
+        // ====== Boot ======
+        refreshFilters();
+        render();
+        </script>
+    </body>
+</html>
