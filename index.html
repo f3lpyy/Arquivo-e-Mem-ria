@@ -2,7 +2,7 @@
 <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width-device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Arquivo e Memória</title>
         <meta name="description" content="Galeria de vídeos de recordações com busca, filtros, favoritos e player em tela cheia." />
         <style>
@@ -63,6 +63,7 @@
                 background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
                 border:1px solid rgba(255,255,255,.08);
                 transition: transform .2s ease, box-shadow .2s ease;
+                display: flex; flex-direction: column;
             }
             .card:hover{ transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124,92,255,.15) }
             .thumb{
@@ -70,6 +71,17 @@
                 linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.6)),
                 radial-gradient(400px 120px at 80% 0%, rgba(124,92,255,.35), transparent 40%),
                 linear-gradient(135deg, #1b1f2a, #0f1116);
+                position: relative;
+                overflow: hidden;
+            }
+            .thumb video {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                aspect-ratio: 16/9;
+                display: block;
+                position: absolute;
+                inset: 0;
             }
             .meta{ padding:12px; display:grid; gap:6px }
             .meta h3{ margin:0; font-size:16px }
@@ -79,6 +91,7 @@
             .actions{ position:absolute; inset:8px 8px auto auto; display:flex; gap:6px }
             .iconbtn{ cursor:pointer; padding:8px; border-radius:10px; background: rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.15) }
             .iconbtn[aria-pressed="true"]{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.5) }
+            .danger.remove{ background: var(--danger); color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor:pointer}
 
             /* Upload area */
             .uploader{ margin-top:16px; display:grid; gap:10px; }
@@ -198,7 +211,6 @@
                 set(v){ localStorage.setItem('memories', JSON.stringify(v)) }
             }
 
-
             // ====== Estado ======
             let memories = store.get()
 
@@ -260,14 +272,21 @@
             ;(m.tags||[]).forEach(t=>{
                 const s = document.createElement('span'); s.className='tag'; s.textContent = t; tags.appendChild(s)
             })
-       
-            // A thumb gerada é apenas visual; o próprio <video> será carregado no modal
-            root.style.setProperty('--thumb', `url('')`)
+
+            // Renderiza a thumb do vídeo responsiva
+            const thumb = $('.thumb', root)
+            thumb.innerHTML = `
+                <video src="${m.src}" muted playsinline controlslist="nodownload nofullscreen noremoteplayback" tabindex="-1"></video>
+            `
+
+            // Botões
             root.addEventListener('click', e=>{
                 const playBtn = e.target.closest('.play')
                 const favBtn = e.target.closest('.fav')
+                const rmBtn = e.target.closest('.remove')
                 if(playBtn){ openPlayer(m) }
                 else if(favBtn){ toggleFav(favBtn, m) }
+                else if(rmBtn){ removeVideo(m.id) }
             })
             const fav = $('.fav', root); fav.setAttribute('aria-pressed', Boolean(m.fav))
             return root
@@ -277,6 +296,13 @@
             m.fav = !m.fav
             btn.setAttribute('aria-pressed', m.fav)
             store.set(memories)
+        }
+
+        function removeVideo(id){
+            memories = memories.filter(m => m.id !== id)
+            store.set(memories)
+            refreshFilters()
+            render()
         }
 
         // ====== Player ======
