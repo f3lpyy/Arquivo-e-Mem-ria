@@ -6,6 +6,71 @@
         <title>Arquivo e Memória</title>
         <meta name="description" content="Galeria de vídeos de recordações com busca, filtros, favoritos e player em tela cheia." />
         <style>
+            <!-- ...código anterior... -->
+<style>
+    /* ...suas variáveis e estilos anteriores... */
+
+    main {
+        max-width: 1100px;
+        margin: 18px auto;
+        padding: 0; /* Remover padding lateral para ocupar 100% */
+    }
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr; /* Uma coluna grande para ocupar 100% */
+        gap: 16px;
+        margin-top: 16px;
+    }
+    @media (min-width:640px) {
+        .grid {
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+    }
+    .card {
+        width: 100%;
+        max-width: 100%;
+        /* Remove restrições para ocupar todo espaço do grid */
+    }
+    .thumb {
+        aspect-ratio: 16/9;
+        width: 100%;
+        display: block;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.6)),
+            radial-gradient(400px 120px at 80% 0%, rgba(124,92,255,.35), transparent 40%),
+            linear-gradient(135deg, #1b1f2a, #0f1116);
+    }
+    .thumb video {
+        width: 100vw; /* Ocupa 100% da largura da viewport */
+        max-width: 100%; /* Nunca ultrapassa o container */
+        height: 100%;
+        object-fit: cover;
+        aspect-ratio: 16/9;
+        display: block;
+        position: absolute;
+        inset: 0;
+    }
+
+    /* Player modal ajustes */
+    dialog[player] {
+        width: min(1100px, 100vw); /* Ocupa 100% em telas pequenas */
+        max-width: 100vw;
+    }
+    .playerBody {
+        padding: 0; /* Remove padding lateral */
+    }
+    #player {
+        width: 100vw;
+        max-width: 100%;
+        height: auto;
+        display: block;
+        background: #000;
+        aspect-ratio: 16/9;
+    }
+
+    /* ...restante dos estilos... */
+<!-- ...código restante... -->
             :root{
                 --bg: #0b0c10;
                 --panel: #111317;
